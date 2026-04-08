@@ -1,223 +1,79 @@
 /* ========================================
-   상세페이지 자동 생성기 - 앱 로직
+   DetailGen 앱 로직
+   JSON 기획서 → 상세페이지 자동 생성
    ======================================== */
 
-/* ---------- 동적 폼 항목 추가/삭제 ---------- */
-
-function addSellingPoint() {
-  const container = document.getElementById('sellingPoints');
-  const item = document.createElement('div');
-  item.className = 'dynamic-item';
-  item.innerHTML = `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>포인트 제목</label>
-        <input type="text" class="sp-title" placeholder="예: 48시간 연속 재생">
-      </div>
-      <div class="form-group">
-        <label>설명</label>
-        <input type="text" class="sp-desc" placeholder="예: 한번 충전으로 이틀간 사용 가능">
-      </div>
-      <div class="form-group">
-        <label>아이콘 키워드</label>
-        <input type="text" class="sp-icon" placeholder="예: 배터리, 시간, 충전">
-      </div>
-    </div>
-    <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-  container.appendChild(item);
-}
-
-function addFeature() {
-  const container = document.getElementById('features');
-  const item = document.createElement('div');
-  item.className = 'dynamic-item feature-item';
-  item.innerHTML = `
-    <div class="form-grid">
-      <div class="form-group full">
-        <label>섹션 제목</label>
-        <input type="text" class="feat-title" placeholder="예: 프리미엄 노이즈 캔슬링">
-      </div>
-      <div class="form-group full">
-        <label>섹션 설명</label>
-        <textarea class="feat-desc" rows="2" placeholder="예: ANC 3.0 기술로 외부 소음을 99% 차단합니다."></textarea>
-      </div>
-      <div class="form-group">
-        <label>이미지 가이드</label>
-        <input type="text" class="feat-img" placeholder="예: 이어폰 착용 후 지하철에서 음악 듣는 모습">
-      </div>
-      <div class="form-group">
-        <label>배경 스타일</label>
-        <select class="feat-bg">
-          <option value="light">밝은 배경</option>
-          <option value="dark">어두운 배경</option>
-          <option value="gradient">그라데이션</option>
-          <option value="color">컬러 배경</option>
-        </select>
-      </div>
-    </div>
-    <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-  container.appendChild(item);
-}
-
-function addSpec() {
-  const container = document.getElementById('specs');
-  const item = document.createElement('div');
-  item.className = 'dynamic-item spec-item';
-  item.innerHTML = `
-    <div class="form-grid two-col">
-      <div class="form-group">
-        <label>항목</label>
-        <input type="text" class="spec-key" placeholder="예: 무게">
-      </div>
-      <div class="form-group">
-        <label>내용</label>
-        <input type="text" class="spec-value" placeholder="예: 5.4g">
-      </div>
-    </div>
-    <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-  container.appendChild(item);
-}
-
-function addReview() {
-  const container = document.getElementById('reviews');
-  const item = document.createElement('div');
-  item.className = 'dynamic-item review-item';
-  item.innerHTML = `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>작성자</label>
-        <input type="text" class="rev-author" placeholder="예: 김**">
-      </div>
-      <div class="form-group">
-        <label>별점 (1~5)</label>
-        <input type="number" class="rev-rating" min="1" max="5" value="5">
-      </div>
-      <div class="form-group full">
-        <label>리뷰 내용</label>
-        <textarea class="rev-content" rows="2" placeholder="예: 음질이 정말 좋고 배터리가 오래가서 매일 사용합니다!"></textarea>
-      </div>
-    </div>
-    <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-  container.appendChild(item);
-}
-
-function removeItem(btn) {
-  btn.closest('.dynamic-item').remove();
-}
-
-/* ---------- 폼 데이터 수집 ---------- */
-
-function collectFormData() {
-  // 기본 정보
-  const data = {
-    productName: document.getElementById('productName').value.trim(),
-    category: document.getElementById('productCategory').value,
-    priceInfo: document.getElementById('priceInfo').value.trim(),
-    shortDesc: document.getElementById('shortDesc').value.trim(),
-    productDesc: document.getElementById('productDesc').value.trim(),
-    targetAudience: document.getElementById('targetAudience').value.trim(),
-    brandName: document.getElementById('brandName').value.trim(),
-    brandStory: document.getElementById('brandStory').value.trim(),
-    sellingPoints: [],
-    features: [],
-    specs: [],
-    reviews: []
-  };
-
-  // 셀링포인트
-  document.querySelectorAll('#sellingPoints .dynamic-item').forEach(item => {
-    const title = item.querySelector('.sp-title').value.trim();
-    const desc = item.querySelector('.sp-desc').value.trim();
-    if (title) {
-      data.sellingPoints.push({ title, desc, icon: item.querySelector('.sp-icon').value.trim() });
-    }
-  });
-
-  // 특징
-  document.querySelectorAll('#features .dynamic-item').forEach(item => {
-    const title = item.querySelector('.feat-title').value.trim();
-    const desc = item.querySelector('.feat-desc').value.trim();
-    if (title) {
-      data.features.push({
-        title,
-        desc,
-        imgGuide: item.querySelector('.feat-img').value.trim(),
-        bg: item.querySelector('.feat-bg').value
-      });
-    }
-  });
-
-  // 스펙
-  document.querySelectorAll('#specs .dynamic-item').forEach(item => {
-    const key = item.querySelector('.spec-key').value.trim();
-    const value = item.querySelector('.spec-value').value.trim();
-    if (key) {
-      data.specs.push({ key, value });
-    }
-  });
-
-  // 리뷰
-  document.querySelectorAll('#reviews .dynamic-item').forEach(item => {
-    const author = item.querySelector('.rev-author').value.trim();
-    const content = item.querySelector('.rev-content').value.trim();
-    if (content) {
-      data.reviews.push({
-        author: author || '익명',
-        rating: parseInt(item.querySelector('.rev-rating').value) || 5,
-        content
-      });
-    }
-  });
-
-  return data;
-}
-
-function collectOptions() {
-  return {
-    colorTheme: document.getElementById('colorTheme').value,
-    layoutStyle: document.getElementById('layoutStyle').value,
-    pageWidth: document.getElementById('pageWidth').value,
-    incHero: document.getElementById('incHero').checked,
-    incSelling: document.getElementById('incSelling').checked,
-    incFeatures: document.getElementById('incFeatures').checked,
-    incSpecs: document.getElementById('incSpecs').checked,
-    incReviews: document.getElementById('incReviews').checked,
-    incBrand: document.getElementById('incBrand').checked,
-    incCta: document.getElementById('incCta').checked
-  };
-}
-
-/* ---------- 페이지 생성 ---------- */
-
-let currentData = null;
+let currentPlanData = null;
 let currentOptions = null;
 
-function generatePage() {
-  const data = collectFormData();
+/* ---------- JSON 입력 실시간 검증 ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const textarea = document.getElementById('jsonInput');
+  const status = document.getElementById('jsonStatus');
 
-  if (!data.productName) {
-    alert('상품명을 입력해주세요.');
-    document.getElementById('productName').focus();
+  textarea.addEventListener('input', () => {
+    const val = textarea.value.trim();
+    if (!val) {
+      status.style.display = 'none';
+      return;
+    }
+    try {
+      const parsed = JSON.parse(val);
+      const sectionCount = parsed.sections?.length || 0;
+      const productName = parsed.product?.name || '알 수 없음';
+      status.className = 'json-status valid';
+      status.textContent = `JSON 유효 — 상품: ${productName} / 섹션 ${sectionCount}개 감지`;
+    } catch (e) {
+      status.className = 'json-status invalid';
+      status.textContent = `JSON 오류: ${e.message}`;
+    }
+  });
+});
+
+/* ---------- 메인 생성 ---------- */
+function generateFromJSON() {
+  const textarea = document.getElementById('jsonInput');
+  const val = textarea.value.trim();
+
+  if (!val) {
+    alert('기획서 JSON을 붙여넣어 주세요.');
+    textarea.focus();
     return;
   }
-  if (!data.shortDesc) {
-    alert('한줄 소개를 입력해주세요.');
-    document.getElementById('shortDesc').focus();
+
+  let planData;
+  try {
+    planData = JSON.parse(val);
+  } catch (e) {
+    alert('JSON 형식이 올바르지 않습니다.\n\n' + e.message);
     return;
   }
 
-  const options = collectOptions();
-  currentData = data;
+  if (!planData.sections || planData.sections.length === 0) {
+    alert('sections 배열이 비어 있습니다.');
+    return;
+  }
+
+  const options = {
+    pageWidth: document.getElementById('pageWidth').value,
+    imageGuideLevel: document.getElementById('imageGuideLevel').value
+  };
+
+  currentPlanData = planData;
   currentOptions = options;
 
-  const themeClass = `theme-${options.colorTheme}`;
-  const layoutClass = `layout-${options.layoutStyle}`;
-  const pageWidth = options.pageWidth + 'px';
-
+  // 테마 CSS 변수 적용
+  const themeCSS = Generator.getThemeCSS(planData);
   const pageEl = document.getElementById('generated-page');
-  pageEl.className = `generated-page ${themeClass} ${layoutClass}`;
-  pageEl.style.maxWidth = pageWidth;
-  pageEl.innerHTML = Generator.generate(data, options);
+  pageEl.style.cssText = `max-width:${options.pageWidth}px;${themeCSS}`;
+  pageEl.className = 'generated-page';
+
+  // HTML 생성
+  pageEl.innerHTML = Generator.generate(planData, options);
+
+  // 제목 업데이트
+  const title = planData.product?.name || '상세페이지';
+  document.getElementById('resultTitle').textContent = `${title} — 미리보기`;
 
   // 화면 전환
   document.getElementById('app-input').style.display = 'none';
@@ -226,141 +82,274 @@ function generatePage() {
 }
 
 /* ---------- 화면 전환 ---------- */
-
 function goBack() {
   document.getElementById('app-result').style.display = 'none';
   document.getElementById('app-input').style.display = 'block';
 }
 
 /* ---------- HTML 내보내기 ---------- */
-
 function exportHTML() {
-  if (!currentData || !currentOptions) return;
+  if (!currentPlanData || !currentOptions) return;
 
-  const html = Generator.generateStandalone(currentData, currentOptions);
+  const html = Generator.generateStandalone(currentPlanData, currentOptions);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${currentData.productName}_상세페이지.html`;
+  const name = currentPlanData.product?.name || '상세페이지';
+  a.download = `${name}_상세페이지.html`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-/* ---------- 데모 데이터 ---------- */
+/* ---------- 촬영 가이드 내보내기 ---------- */
+function exportImageList() {
+  if (!currentPlanData) return;
 
-function loadDemo() {
-  document.getElementById('productName').value = '프리미엄 무선 블루투스 이어폰 AirSound Pro';
-  document.getElementById('productCategory').value = 'electronics';
-  document.getElementById('priceInfo').value = '139,000원 → 89,000원 (36% 할인)';
-  document.getElementById('shortDesc').value = '하루종일 편안한 착용감, 프리미엄 사운드를 경험하세요';
-  document.getElementById('productDesc').value = 'AirSound Pro는 최신 블루투스 5.3 기술과 하이브리드 ANC를 탑재한 프리미엄 무선 이어폰입니다. 11mm 커스텀 드라이버가 선사하는 풍부한 사운드와 48시간 배터리로 음악에 몰입하세요.';
-  document.getElementById('targetAudience').value = '20-30대 음악을 즐기는 직장인, 통근러';
-  document.getElementById('brandName').value = 'AirSound';
-  document.getElementById('brandStory').value = 'AirSound는 2019년 설립 이래 "일상에 프리미엄 사운드를"이라는 비전 아래, 합리적인 가격에 최고의 음질을 제공하기 위해 노력하고 있습니다. 100만 고객이 선택한 오디오 브랜드입니다.';
+  const md = Generator.generateImageGuide(currentPlanData);
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const name = currentPlanData.product?.name || '상세페이지';
+  a.download = `${name}_촬영가이드.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
-  // 셀링포인트
-  const spContainer = document.getElementById('sellingPoints');
-  spContainer.innerHTML = '';
-  const spData = [
-    { title: '48시간 연속 재생', desc: '한번 충전으로 이틀간 음악을 즐기세요', icon: '배터리' },
-    { title: '하이브리드 ANC', desc: '외부 소음 99% 차단으로 몰입감 극대화', icon: '노이즈캔슬링' },
-    { title: 'IPX5 방수', desc: '운동 중 땀이나 갑작스러운 비에도 안심', icon: '방수' },
-    { title: '초경량 5.4g', desc: '하루종일 착용해도 귀가 편안합니다', icon: '깃털' }
-  ];
-  spData.forEach(sp => {
-    const item = document.createElement('div');
-    item.className = 'dynamic-item';
-    item.innerHTML = `
-      <div class="form-grid">
-        <div class="form-group"><label>포인트 제목</label><input type="text" class="sp-title" value="${sp.title}"></div>
-        <div class="form-group"><label>설명</label><input type="text" class="sp-desc" value="${sp.desc}"></div>
-        <div class="form-group"><label>아이콘 키워드</label><input type="text" class="sp-icon" value="${sp.icon}"></div>
-      </div>
-      <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-    spContainer.appendChild(item);
-  });
+/* ---------- 퀵베이트 데모 데이터 ---------- */
+function loadQuickBaitDemo() {
+  const demo = {
+    "product": {
+      "brand": "퀵베이트",
+      "name": "퀵베이트",
+      "type": "동결건조 갯지렁이 기반 간편 미끼",
+      "concept": "출조 준비의 번거로움을 줄이고 빠르게 사용할 수 있는 간편 미끼 솔루션"
+    },
+    "pageGoal": {
+      "primary": "생미끼의 불편함을 대체할 수 있는 간편한 선택지로 인식시키기",
+      "secondary": "보관 편의성, 휴대성, 빠른 사용성 중심으로 구매 전환 유도",
+      "tone": "실전형, 간결함, 신뢰감, 과장 적음"
+    },
+    "brandSystem": {
+      "brandKeywords": ["간편함", "실전성", "휴대성", "빠른 준비"],
+      "brandVoice": {
+        "tone": "실전형, 간결함, 신뢰감",
+        "style": ["짧은 문장", "과장 없는 장점 설명", "현장 중심 표현", "모바일 친화적 카피"]
+      }
+    },
+    "visualDirection": {
+      "overallMood": "실사용 기반의 실사형 상세페이지",
+      "photoStyle": ["깔끔한 제품 컷", "현장감 있는 사용 컷", "정보 전달 중심 구성"],
+      "lighting": ["제품컷은 선명하고 또렷하게", "현장컷은 자연광 느낌", "비교컷은 대비 강하게"],
+      "backgroundUsage": {
+        "hero": "딥네이비 또는 블랙",
+        "benefit": "화이트 또는 라이트그레이",
+        "usage": "실제 현장 배경",
+        "cta": "밝은 단색 배경"
+      }
+    },
+    "sections": [
+      {
+        "moduleId": "M01",
+        "name": "hero_cover",
+        "headline": "출조 준비를 더 빠르고 간편하게",
+        "subheadline": "보관과 휴대의 번거로움을 줄인 간편 미끼 솔루션",
+        "productName": "퀵베이트",
+        "heightGuide": "1200~1600px",
+        "layout": "제품 중심 세로형 커버",
+        "imageConcept": {
+          "summary": "메인 커버 이미지",
+          "detailedDescription": "어두운 네이비 또는 블랙 배경 위 중앙에 퀵베이트 패키지를 배치하고, 패키지 앞쪽에 내용물 일부를 자연스럽게 펼쳐놓는다. 낚시 채비 소품은 은은하게 배치하여 현장감을 더하되 제품을 방해하지 않게 한다. 전체적으로 깔끔하고 고급스럽지만 실전적인 느낌이 살아야 한다."
+        },
+        "overlayText": ["출조 준비를 더 빠르고 간편하게", "퀵베이트", "보관과 휴대의 번거로움을 줄인 간편 미끼 솔루션"]
+      },
+      {
+        "moduleId": "M02",
+        "name": "problem_section",
+        "headline": "미끼 준비, 아직도 번거로우신가요?",
+        "body": "보관은 어렵고 준비는 번거롭고, 현장에서는 더 바빠집니다.",
+        "heightGuide": "900~1200px",
+        "layout": "비교형 또는 상하 분할형",
+        "imageConcept": {
+          "summary": "문제 공감 비교 이미지",
+          "detailedDescription": "좌측에는 번거롭고 어수선한 생미끼 준비 상황을 보여주고, 우측에는 깔끔하게 정리된 퀵베이트와 출조 준비 장면을 배치한다. 한눈에 비교될 정도로 정리 상태와 편의성 차이가 느껴져야 한다."
+        },
+        "overlayText": ["미끼 준비, 아직도 번거로우신가요?", "보관은 어렵고 준비는 번거롭고, 현장에서는 더 바빠집니다."]
+      },
+      {
+        "moduleId": "M03",
+        "name": "solution_section",
+        "headline": "더 간편한 출조 준비의 시작",
+        "body": "퀵베이트는 복잡한 준비 부담을 줄이기 위해 기획된 간편 미끼입니다.",
+        "imageConcept": {
+          "summary": "해결 제안 이미지",
+          "detailedDescription": "깨끗한 배경 위에 퀵베이트 제품과 간단한 낚시 준비 장면을 구성한다. 제품이 해결책처럼 느껴져야 하며, 군더더기 없는 화면 구성이 중요하다."
+        }
+      },
+      {
+        "moduleId": "M04",
+        "name": "benefit_storage",
+        "headline": "보관 부담은 줄이고",
+        "body": "복잡한 관리 스트레스를 덜고 더 깔끔하게 보관할 수 있습니다.",
+        "imageConcept": {
+          "summary": "보관 장점 이미지",
+          "detailedDescription": "정리된 수납공간이나 가방 안에 퀵베이트가 깔끔하게 놓여 있는 장면. 한눈에 보관이 쉽고 부담이 적다는 인상을 주는 구도여야 한다."
+        }
+      },
+      {
+        "moduleId": "M05",
+        "name": "benefit_portable",
+        "headline": "휴대는 더 가볍게",
+        "body": "출조와 이동, 현장 활용까지 부담 없이 챙길 수 있습니다.",
+        "imageConcept": {
+          "summary": "휴대성 이미지",
+          "detailedDescription": "낚시 가방, 태클박스 안에 퀵베이트가 다른 장비와 함께 정리되어 있는 장면. 부피 부담이 적고 실전 이동에 적합한 느낌을 강조한다."
+        }
+      },
+      {
+        "moduleId": "M06",
+        "name": "benefit_fast",
+        "headline": "준비 시간은 더 짧게",
+        "body": "필요한 순간 빠르게 꺼내 사용할 수 있어 낚시에 더 집중할 수 있습니다.",
+        "imageConcept": {
+          "summary": "빠른 준비 이미지",
+          "detailedDescription": "현장에서 손으로 퀵베이트를 꺼내는 장면, 채비와 함께 곧바로 사용할 수 있는 흐름이 자연스럽게 느껴지도록 구성한다."
+        }
+      },
+      {
+        "moduleId": "M07",
+        "name": "benefit_field",
+        "headline": "현장 사용은 더 실전적으로",
+        "body": "출조 현장에서 간편성과 사용 편의성을 높인 실전형 미끼입니다.",
+        "imageConcept": {
+          "summary": "현장 사용 이미지",
+          "detailedDescription": "실제 낚시터 배경과 채비 주변에서 퀵베이트를 사용하는 장면. 광고스럽기보다 실제 출조 현장처럼 자연스러운 분위기가 중요하다."
+        }
+      },
+      {
+        "moduleId": "M08",
+        "name": "target_users",
+        "headline": "이런 분께 추천합니다",
+        "items": ["생미끼 관리가 번거로운 분", "간편하게 출조 준비하고 싶은 분", "휴대와 보관이 쉬운 미끼를 찾는 분", "현장에서 빠르게 사용하고 싶은 분"],
+        "imageConcept": {
+          "summary": "추천 대상 이미지",
+          "detailedDescription": "4분할 카드형 또는 상황형 이미지로 구성하며, 각각의 사용 상황을 직관적으로 보여준다. 텍스트와 함께 모바일에서 읽기 쉽게 정리한다."
+        }
+      },
+      {
+        "moduleId": "M09",
+        "name": "comparison_table",
+        "headline": "왜 퀵베이트인가?",
+        "rows": ["보관 편의성", "휴대성", "준비 시간", "현장 사용성"],
+        "imageConcept": {
+          "summary": "비교 인포그래픽",
+          "detailedDescription": "생미끼와 퀵베이트를 비교하는 인포그래픽 구조. 좌측은 번거로운 일반 미끼, 우측은 간편한 퀵베이트를 상징적으로 보여주고, 핵심 차이를 표 형태로 정리한다."
+        }
+      },
+      {
+        "moduleId": "M10",
+        "name": "product_detail",
+        "headline": "제품 디테일 확인",
+        "body": "패키지와 내용물, 형태를 한눈에 확인할 수 있도록 구성합니다.",
+        "imageConcept": {
+          "summary": "디테일 컷",
+          "detailedDescription": "패키지 정면컷, 내용물 확대컷, 질감 디테일컷을 정리된 구성으로 보여준다. 너무 혐오스럽지 않게 질감이 느껴져야 하며, 제품 이해가 쉬워야 한다."
+        }
+      },
+      {
+        "moduleId": "M11",
+        "name": "usage_flow",
+        "headline": "사용도 간단하게",
+        "steps": ["제품을 꺼냅니다", "낚시 준비를 합니다", "채비에 맞게 사용합니다", "현장에서 바로 활용합니다"],
+        "imageConcept": {
+          "summary": "사용 흐름 가이드",
+          "detailedDescription": "4단계 사용 흐름을 순서대로 보여주는 가이드형 이미지. 제품 꺼내기, 준비하기, 채비 사용, 현장 활용 장면이 직관적으로 보이게 구성한다."
+        }
+      },
+      {
+        "moduleId": "M12",
+        "name": "trust_section",
+        "headline": "보이는 것부터 믿을 수 있게",
+        "points": ["깔끔한 패키지 구성", "직관적인 제품 확인", "현장에서 바로 꺼내 쓰기 쉬운 형태"],
+        "imageConcept": {
+          "summary": "신뢰 이미지",
+          "detailedDescription": "정갈한 제품 구성컷과 패키지 컷을 밝은 배경 위에 배치해 깔끔하고 믿음직한 느낌을 전달한다."
+        }
+      },
+      {
+        "moduleId": "M13",
+        "name": "faq",
+        "headline": "자주 묻는 질문",
+        "qa": [
+          { "q": "퀵베이트는 어떤 제품인가요?", "a": "출조 준비의 번거로움을 줄이기 위해 기획된 간편 미끼입니다." },
+          { "q": "보관은 어떻게 하나요?", "a": "직사광선과 습기를 피해 보관하는 것을 권장합니다." },
+          { "q": "누가 사용하면 좋나요?", "a": "간편한 보관과 휴대를 원하는 낚시인에게 적합합니다." }
+        ]
+      },
+      {
+        "moduleId": "M14",
+        "name": "experience_message",
+        "headline": "이런 점이 특히 편했습니다",
+        "quotes": ["보관 부담이 줄어서 훨씬 편했습니다.", "출조 준비 시간이 짧아졌습니다.", "휴대가 쉬워서 현장에서 부담이 적었습니다."]
+      },
+      {
+        "moduleId": "M15",
+        "name": "final_cta",
+        "headline": "간편한 준비가 실전의 차이를 만듭니다",
+        "productName": "퀵베이트",
+        "body": "더 가볍고 더 간편한 출조를 시작해보세요.",
+        "cta": "퀵베이트 지금 확인하기",
+        "imageConcept": {
+          "summary": "최종 CTA 이미지",
+          "detailedDescription": "밝고 단정한 배경 위에 퀵베이트 제품을 중앙에 두고 핵심 메시지와 CTA를 단정하게 정리한 마감 배너형 구성."
+        }
+      }
+    ],
+    "fileNamingGuide": [
+      "01_hero_quickbait.jpg",
+      "02_problem_compare.jpg",
+      "03_solution_quickbait.jpg",
+      "04_benefit_storage.jpg",
+      "05_benefit_portable.jpg",
+      "06_benefit_fast.jpg",
+      "07_benefit_field.jpg",
+      "08_target_users.jpg",
+      "09_comparison_table.jpg",
+      "10_product_detail.jpg",
+      "11_usage_flow.jpg",
+      "12_trust_section.jpg",
+      "13_faq.jpg",
+      "14_experience_message.jpg",
+      "15_final_cta.jpg"
+    ],
+    "image_asset_checklist": [
+      "패키지 정면컷",
+      "패키지 45도컷",
+      "내용물 확대컷",
+      "질감 클로즈업컷",
+      "손에 들고 있는 컷",
+      "태클박스 또는 가방 수납컷",
+      "채비 근처 배치컷",
+      "실제 출조 현장컷",
+      "생미끼 대비 비교 연출컷",
+      "패키지 진열컷"
+    ],
+    "image_generation_prompt_examples": [
+      "어두운 네이비 배경 위에 퀵베이트 패키지가 중앙에 놓여 있고, 앞쪽에는 내용물이 자연스럽게 펼쳐져 있는 고급스러운 실사형 제품 메인 이미지",
+      "좌측은 번거로운 생미끼 준비 상황, 우측은 깔끔하게 정리된 퀵베이트 제품과 출조 준비 장면이 대비되는 이미지",
+      "낚시 가방과 태클박스에 퀵베이트가 자연스럽게 들어가 있는 실사형 이미지",
+      "낚시터 현장에서 실제 채비와 함께 퀵베이트를 사용하는 느낌의 실사형 이미지"
+    ]
+  };
 
-  // 특징
-  const featContainer = document.getElementById('features');
-  featContainer.innerHTML = '';
-  const featData = [
-    { title: '프리미엄 노이즈 캔슬링', desc: 'ANC 3.0 하이브리드 기술로 외부 소음을 99% 차단합니다. 지하철에서도, 카페에서도 오직 음악에만 집중하세요. 주변 소리를 들어야 할 때는 투명 모드로 전환할 수 있습니다.', imgGuide: '이어폰을 착용한 채 지하철에서 편안하게 음악을 듣고 있는 직장인 모습', bg: 'light' },
-    { title: '48시간 끊김 없는 음악', desc: '업계 최장 수준의 48시간 배터리 수명. 케이스 포함 시 최대 120시간까지 사용 가능합니다. 10분 급속 충전으로 3시간 재생이 가능하여 급할 때도 걱정 없습니다.', imgGuide: '충전 케이스에서 이어폰을 꺼내는 모습, 배터리 잔량 표시 LED가 보이는 클로즈업', bg: 'dark' },
-    { title: '11mm 커스텀 드라이버', desc: '자체 개발한 11mm 다이나믹 드라이버가 깊고 풍부한 저음부터 선명한 고음까지 균형 잡힌 사운드를 전달합니다. Hi-Res Audio 인증으로 원음에 가까운 음질을 경험하세요.', imgGuide: '이어폰 내부 드라이버 단면도 또는 음파가 퍼져나가는 그래픽 이미지', bg: 'gradient' },
-    { title: '하루종일 편안한 착용감', desc: '인체공학적으로 설계된 이어팁과 5.4g 초경량 본체로 오랜 시간 착용해도 귀가 아프지 않습니다. S/M/L 3가지 크기의 실리콘 이어팁과 폼팁이 기본 제공됩니다.', imgGuide: '다양한 귀 모양에 맞는 이어팁 구성품이 정렬된 모습, 깔끔한 제품 플랫레이', bg: 'color' }
-  ];
-  featData.forEach(f => {
-    const item = document.createElement('div');
-    item.className = 'dynamic-item feature-item';
-    item.innerHTML = `
-      <div class="form-grid">
-        <div class="form-group full"><label>섹션 제목</label><input type="text" class="feat-title" value="${f.title}"></div>
-        <div class="form-group full"><label>섹션 설명</label><textarea class="feat-desc" rows="2">${f.desc}</textarea></div>
-        <div class="form-group"><label>이미지 가이드</label><input type="text" class="feat-img" value="${f.imgGuide}"></div>
-        <div class="form-group"><label>배경 스타일</label><select class="feat-bg">
-          <option value="light"${f.bg === 'light' ? ' selected' : ''}>밝은 배경</option>
-          <option value="dark"${f.bg === 'dark' ? ' selected' : ''}>어두운 배경</option>
-          <option value="gradient"${f.bg === 'gradient' ? ' selected' : ''}>그라데이션</option>
-          <option value="color"${f.bg === 'color' ? ' selected' : ''}>컬러 배경</option>
-        </select></div>
-      </div>
-      <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-    featContainer.appendChild(item);
-  });
+  document.getElementById('jsonInput').value = JSON.stringify(demo, null, 2);
+  // 입력 이벤트 트리거
+  document.getElementById('jsonInput').dispatchEvent(new Event('input'));
 
-  // 스펙
-  const specContainer = document.getElementById('specs');
-  specContainer.innerHTML = '';
-  const specData = [
-    { key: '드라이버', value: '11mm 커스텀 다이나믹 드라이버' },
-    { key: '블루투스', value: 'Bluetooth 5.3' },
-    { key: '코덱', value: 'AAC, SBC, LDAC' },
-    { key: '배터리', value: '이어버드 48시간 / 케이스 포함 120시간' },
-    { key: '충전', value: 'USB-C 급속충전 (10분 충전 = 3시간 재생)' },
-    { key: '방수등급', value: 'IPX5' },
-    { key: '무게', value: '5.4g (이어버드 1개 기준)' },
-    { key: '노이즈 캔슬링', value: 'ANC 3.0 하이브리드 (최대 -40dB)' }
-  ];
-  specData.forEach(s => {
-    const item = document.createElement('div');
-    item.className = 'dynamic-item spec-item';
-    item.innerHTML = `
-      <div class="form-grid two-col">
-        <div class="form-group"><label>항목</label><input type="text" class="spec-key" value="${s.key}"></div>
-        <div class="form-group"><label>내용</label><input type="text" class="spec-value" value="${s.value}"></div>
-      </div>
-      <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-    specContainer.appendChild(item);
-  });
-
-  // 리뷰
-  const revContainer = document.getElementById('reviews');
-  revContainer.innerHTML = '';
-  const revData = [
-    { author: '김**', rating: 5, content: '음질이 정말 좋고 배터리가 오래가서 출퇴근길에 매일 사용하고 있어요! 노이즈 캔슬링도 지하철에서 확실히 효과 있습니다.' },
-    { author: '이**', rating: 5, content: '이 가격에 이 정도 퀄리티라니 놀랍습니다. 에어팟 프로 쓰다가 갈아탔는데 전혀 아쉬움이 없어요.' },
-    { author: '박**', rating: 4, content: '착용감이 정말 가볍고 편해요. 운동할 때도 안 빠지고 방수도 되니까 안심하고 쓸 수 있습니다. 앱 연동도 잘 돼요.' }
-  ];
-  revData.forEach(r => {
-    const item = document.createElement('div');
-    item.className = 'dynamic-item review-item';
-    item.innerHTML = `
-      <div class="form-grid">
-        <div class="form-group"><label>작성자</label><input type="text" class="rev-author" value="${r.author}"></div>
-        <div class="form-group"><label>별점 (1~5)</label><input type="number" class="rev-rating" min="1" max="5" value="${r.rating}"></div>
-        <div class="form-group full"><label>리뷰 내용</label><textarea class="rev-content" rows="2">${r.content}</textarea></div>
-      </div>
-      <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>`;
-    revContainer.appendChild(item);
-  });
-
-  // 디자인 옵션
-  document.getElementById('colorTheme').value = 'cool';
-  document.getElementById('layoutStyle').value = 'modern';
-  document.getElementById('pageWidth').value = '780';
-
-  alert('데모 데이터가 로드되었습니다! "상세페이지 생성하기" 버튼을 눌러주세요.');
+  alert('퀵베이트 데모 데이터가 로드되었습니다!\n"상세페이지 생성하기" 버튼을 눌러주세요.');
 }

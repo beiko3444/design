@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>상세페이지 자동 생성기</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ========== 입력 화면 ========== -->
+  <div id="app-input" class="app-screen">
+    <header class="app-header">
+      <div class="header-inner">
+        <h1 class="logo">Detail<span>Gen</span></h1>
+        <p class="tagline">기획서만 넣으면 상세페이지가 뚝딱</p>
+      </div>
+    </header>
+
+    <main class="form-container">
+      <!-- 기본 정보 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">01</span>
+          <h2>기본 정보</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="productName">상품명 <span class="required">*</span></label>
+            <input type="text" id="productName" placeholder="예: 프리미엄 무선 블루투스 이어폰 AirSound Pro">
+          </div>
+          <div class="form-group">
+            <label for="productCategory">카테고리</label>
+            <select id="productCategory">
+              <option value="general">일반 상품</option>
+              <option value="food">식품</option>
+              <option value="beauty">뷰티/화장품</option>
+              <option value="fashion">패션/의류</option>
+              <option value="electronics">전자기기</option>
+              <option value="interior">인테리어/가구</option>
+              <option value="health">건강/헬스</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="priceInfo">가격 정보</label>
+            <input type="text" id="priceInfo" placeholder="예: 89,000원 → 59,000원 (34% 할인)">
+          </div>
+          <div class="form-group full">
+            <label for="shortDesc">한줄 소개 <span class="required">*</span></label>
+            <input type="text" id="shortDesc" placeholder="예: 하루종일 편안한 착용감, 프리미엄 사운드를 경험하세요">
+          </div>
+          <div class="form-group full">
+            <label for="productDesc">상세 설명</label>
+            <textarea id="productDesc" rows="3" placeholder="상품에 대한 자세한 설명을 입력하세요"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- 타겟/브랜드 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">02</span>
+          <h2>타겟 & 브랜드</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="targetAudience">타겟 고객</label>
+            <input type="text" id="targetAudience" placeholder="예: 20-30대 음악을 즐기는 직장인">
+          </div>
+          <div class="form-group">
+            <label for="brandName">브랜드명</label>
+            <input type="text" id="brandName" placeholder="예: AirSound">
+          </div>
+          <div class="form-group full">
+            <label for="brandStory">브랜드 스토리</label>
+            <textarea id="brandStory" rows="2" placeholder="브랜드에 대한 이야기를 입력하세요"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- 핵심 셀링포인트 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">03</span>
+          <h2>핵심 셀링포인트</h2>
+          <button type="button" class="btn-add" onclick="addSellingPoint()">+ 추가</button>
+        </div>
+        <div id="sellingPoints" class="dynamic-list">
+          <div class="dynamic-item">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>포인트 제목</label>
+                <input type="text" class="sp-title" placeholder="예: 48시간 연속 재생">
+              </div>
+              <div class="form-group">
+                <label>설명</label>
+                <input type="text" class="sp-desc" placeholder="예: 한번 충전으로 이틀간 사용 가능">
+              </div>
+              <div class="form-group">
+                <label>아이콘 키워드</label>
+                <input type="text" class="sp-icon" placeholder="예: 배터리, 시간, 충전">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 상세 특징 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">04</span>
+          <h2>상세 특징 (이미지 + 텍스트 섹션)</h2>
+          <button type="button" class="btn-add" onclick="addFeature()">+ 추가</button>
+        </div>
+        <div id="features" class="dynamic-list">
+          <div class="dynamic-item feature-item">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>섹션 제목</label>
+                <input type="text" class="feat-title" placeholder="예: 프리미엄 노이즈 캔슬링">
+              </div>
+              <div class="form-group full">
+                <label>섹션 설명</label>
+                <textarea class="feat-desc" rows="2" placeholder="예: ANC 3.0 기술로 외부 소음을 99% 차단합니다. 지하철에서도, 카페에서도 오직 음악에만 집중하세요."></textarea>
+              </div>
+              <div class="form-group">
+                <label>이미지 가이드</label>
+                <input type="text" class="feat-img" placeholder="예: 이어폰 착용 후 지하철에서 음악 듣는 모습">
+              </div>
+              <div class="form-group">
+                <label>배경 스타일</label>
+                <select class="feat-bg">
+                  <option value="light">밝은 배경</option>
+                  <option value="dark">어두운 배경</option>
+                  <option value="gradient">그라데이션</option>
+                  <option value="color">컬러 배경</option>
+                </select>
+              </div>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 스펙/사양 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">05</span>
+          <h2>제품 사양 / 스펙</h2>
+          <button type="button" class="btn-add" onclick="addSpec()">+ 추가</button>
+        </div>
+        <div id="specs" class="dynamic-list">
+          <div class="dynamic-item spec-item">
+            <div class="form-grid two-col">
+              <div class="form-group">
+                <label>항목</label>
+                <input type="text" class="spec-key" placeholder="예: 무게">
+              </div>
+              <div class="form-group">
+                <label>내용</label>
+                <input type="text" class="spec-value" placeholder="예: 5.4g (이어버드 1개 기준)">
+              </div>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 리뷰/후기 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">06</span>
+          <h2>고객 리뷰 / 후기</h2>
+          <button type="button" class="btn-add" onclick="addReview()">+ 추가</button>
+        </div>
+        <div id="reviews" class="dynamic-list">
+          <div class="dynamic-item review-item">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>작성자</label>
+                <input type="text" class="rev-author" placeholder="예: 김**">
+              </div>
+              <div class="form-group">
+                <label>별점 (1~5)</label>
+                <input type="number" class="rev-rating" min="1" max="5" value="5">
+              </div>
+              <div class="form-group full">
+                <label>리뷰 내용</label>
+                <textarea class="rev-content" rows="2" placeholder="예: 음질이 정말 좋고 배터리가 오래가서 출퇴근길에 매일 사용하고 있어요!"></textarea>
+              </div>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeItem(this)">삭제</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 추가 옵션 -->
+      <section class="form-section">
+        <div class="section-header">
+          <span class="section-number">07</span>
+          <h2>디자인 옵션</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="colorTheme">컬러 테마</label>
+            <select id="colorTheme">
+              <option value="minimal">미니멀 (흑백)</option>
+              <option value="warm">웜톤 (베이지/브라운)</option>
+              <option value="cool">쿨톤 (블루/그레이)</option>
+              <option value="luxury">럭셔리 (블랙/골드)</option>
+              <option value="natural">내추럴 (그린/베이지)</option>
+              <option value="vivid">비비드 (컬러풀)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="layoutStyle">레이아웃 스타일</label>
+            <select id="layoutStyle">
+              <option value="modern">모던/심플</option>
+              <option value="magazine">매거진</option>
+              <option value="bold">볼드/임팩트</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="pageWidth">페이지 폭</label>
+            <select id="pageWidth">
+              <option value="780">780px (스마트스토어)</option>
+              <option value="860">860px (쿠팡)</option>
+              <option value="1000">1000px (자사몰)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>포함 섹션</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label"><input type="checkbox" id="incHero" checked> 히어로 배너</label>
+              <label class="checkbox-label"><input type="checkbox" id="incSelling" checked> 셀링포인트</label>
+              <label class="checkbox-label"><input type="checkbox" id="incFeatures" checked> 상세 특징</label>
+              <label class="checkbox-label"><input type="checkbox" id="incSpecs" checked> 제품 사양</label>
+              <label class="checkbox-label"><input type="checkbox" id="incReviews" checked> 고객 리뷰</label>
+              <label class="checkbox-label"><input type="checkbox" id="incBrand" checked> 브랜드 스토리</label>
+              <label class="checkbox-label"><input type="checkbox" id="incCta" checked> CTA (구매유도)</label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 생성 버튼 -->
+      <div class="form-actions">
+        <button type="button" class="btn-generate" onclick="generatePage()">
+          상세페이지 생성하기
+        </button>
+        <button type="button" class="btn-demo" onclick="loadDemo()">
+          데모 데이터 불러오기
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ========== 결과 화면 ========== -->
+  <div id="app-result" class="app-screen" style="display:none;">
+    <div class="result-toolbar">
+      <button class="toolbar-btn" onclick="goBack()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        돌아가기
+      </button>
+      <div class="toolbar-title">미리보기</div>
+      <div class="toolbar-actions">
+        <button class="toolbar-btn" onclick="exportHTML()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          HTML 저장
+        </button>
+        <button class="toolbar-btn" onclick="window.print()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+          인쇄 / PDF
+        </button>
+      </div>
+    </div>
+    <div class="result-wrapper">
+      <div id="generated-page" class="generated-page"></div>
+    </div>
+  </div>
+
+  <script src="js/templates.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

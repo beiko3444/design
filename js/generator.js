@@ -1,13 +1,14 @@
 /* ========================================
-   상세페이지 생성 엔진
-   JSON 기획서 → 완성된 상세페이지 HTML
+   DetailGen v2 - 생성 엔진
+   - 섹션 라우팅
+   - 카피 검증
+   - 모바일 순서 정렬
+   - 3종 내보내기
    ======================================== */
 
 const Generator = {
 
-  /**
-   * 섹션 name → 템플릿 함수 매핑
-   */
+  /* ===== 섹션 name → 템플릿 매핑 ===== */
   sectionMap: {
     'hero_cover': 'hero_cover',
     'problem_section': 'problem_section',
@@ -26,38 +27,35 @@ const Generator = {
     'final_cta': 'final_cta'
   },
 
-  /**
-   * 전체 상세페이지 생성
-   */
+  /* ===== 메인 생성 ===== */
   generate(planData, options) {
-    const sections = planData.sections || [];
+    let sections = [...(planData.sections || [])];
     const ctx = this.buildContext(planData, options);
 
+    // 모바일 모드면 smartstore_mobile_flow 순서로 정렬
+    if (options?.viewMode === 'mobile' && planData.smartstore_mobile_flow) {
+      sections = this.reorderForMobile(sections, planData.smartstore_mobile_flow);
+    }
+
+    // 모바일 모드 노치
+    let html = '';
+    if (options?.viewMode === 'mobile') {
+      html += '<div class="mobile-notch"></div>';
+    }
+
     let benefitIndex = 0;
-    const htmlParts = sections.map(section => {
+    html += sections.map(section => {
       const templateName = this.sectionMap[section.name];
-
-      if (!templateName) {
-        return Templates.generic(section, ctx);
-      }
-
-      if (templateName === 'benefit') {
-        return Templates.benefit(section, ctx, benefitIndex++);
-      }
-
-      if (typeof Templates[templateName] === 'function') {
-        return Templates[templateName](section, ctx);
-      }
-
+      if (!templateName) return Templates.generic(section, ctx);
+      if (templateName === 'benefit') return Templates.benefit(section, ctx, benefitIndex++);
+      if (typeof Templates[templateName] === 'function') return Templates[templateName](section, ctx);
       return Templates.generic(section, ctx);
-    });
+    }).join('\n');
 
-    return htmlParts.join('\n');
+    return html;
   },
 
-  /**
-   * 컨텍스트 객체 생성 (각 템플릿에 전달)
-   */
+  /* ===== 컨텍스트 빌드 ===== */
   buildContext(planData, options) {
     return {
       productName: planData.product?.name || '',
@@ -68,226 +66,367 @@ const Generator = {
       brandSystem: planData.brandSystem || {},
       pageGoal: planData.pageGoal || {},
       fileNames: planData.fileNamingGuide || [],
+      flowOrder: planData.smartstore_mobile_flow || [],
       guideLevel: options?.imageGuideLevel || 'full',
-      pageWidth: options?.pageWidth || 780
+      pageWidth: options?.pageWidth || 780,
+      viewMode: options?.viewMode || 'preview'
     };
   },
 
-  /**
-   * 비주얼 디렉션 → CSS 변수 변환
-   */
-  getThemeCSS(planData) {
-    const vd = planData.visualDirection || {};
-    const bgUsage = vd.backgroundUsage || {};
+  /* ===== 모바일 순서 정렬 ===== */
+  reorderForMobile(sections, flow) {
+    const nameToFlow = {};
+    const flowLabels = {
+      '메인 비주얼': 'hero_cover',
+      '문제 공감': 'problem_section',
+      '해결 제안': 'solution_section',
+      '핵심 장점 1': 'benefit_storage',
+      '핵심 장점 2': 'benefit_portable',
+      '핵심 장점 3': 'benefit_fast',
+      '핵심 장점 4': 'benefit_field',
+      '추천 대상': 'target_users',
+      '비교 섹션': 'comparison_table',
+      '실사용 장면': 'product_detail',
+      '제품 디테일': 'product_detail',
+      '사용 가이드': 'usage_flow',
+      '신뢰 포인트': 'trust_section',
+      'FAQ': 'faq',
+      '체감 메시지': 'experience_message',
+      '최종 CTA': 'final_cta'
+    };
 
-    // 히어로 배경색 추출
-    let heroBg = '#111827';
-    const heroBgText = (bgUsage.hero || '').toLowerCase();
-    if (heroBgText.includes('네이비')) heroBg = '#0f172a';
-    else if (heroBgText.includes('블랙')) heroBg = '#111111';
-    else if (heroBgText.includes('화이트')) heroBg = '#ffffff';
+    flow.forEach((label, i) => {
+      const name = flowLabels[label];
+      if (name) nameToFlow[name] = i;
+    });
 
-    // 베네핏 배경
-    let benefitBg = '#f9fafb';
-    const benefitBgText = (bgUsage.benefit || '').toLowerCase();
-    if (benefitBgText.includes('화이트')) benefitBg = '#ffffff';
-    else if (benefitBgText.includes('라이트') || benefitBgText.includes('그레이')) benefitBg = '#f3f4f6';
-
-    // CTA 배경
-    let ctaBg = '#f8fafc';
-    const ctaBgText = (bgUsage.cta || '').toLowerCase();
-    if (ctaBgText.includes('밝은')) ctaBg = '#f0f9ff';
-
-    return `
-      --dp-hero-bg: ${heroBg};
-      --dp-benefit-bg: ${benefitBg};
-      --dp-cta-bg: ${ctaBg};
-      --dp-accent: #2563eb;
-      --dp-text: #1f2937;
-      --dp-text-light: #6b7280;
-    `;
+    return [...sections].sort((a, b) => {
+      const orderA = nameToFlow[a.name] ?? 999;
+      const orderB = nameToFlow[b.name] ?? 999;
+      return orderA - orderB;
+    });
   },
 
-  /**
-   * 독립 실행 HTML 파일 생성 (내보내기용)
-   */
-  generateStandalone(planData, options) {
-    const content = this.generate(planData, options);
-    const themeCSS = this.getThemeCSS(planData);
+  /* ========================================
+     카피 검증 시스템
+     copyRules 기반 실시간 검증
+     ======================================== */
+
+  validateCopy(planData) {
+    const rules = planData.copyRules || {};
+    const sections = planData.sections || [];
+    const results = [];
+
+    // 헤드라인 규칙 파싱
+    const headlineMax = parseInt((rules.headlineRule || '').match(/(\d+)/)?.[1]) || 20;
+    // 본문 규칙 파싱
+    const bodyMaxSentences = parseInt((rules.bodyRule || '').match(/(\d+)/)?.[1]) || 3;
+    // 금지 표현
+    const forbidden = rules.forbiddenExpressions || [];
+
+    sections.forEach(section => {
+      const mid = section.moduleId || '';
+
+      // 헤드라인 길이 체크
+      const headline = section.headline || section.textOnImage?.headline || '';
+      if (headline) {
+        const len = headline.replace(/\s/g, '').length;
+        if (len > headlineMax) {
+          results.push({
+            type: 'warn',
+            module: mid,
+            msg: `헤드라인 ${len}자 (권장 ${headlineMax}자 이내): "${headline}"`
+          });
+        } else {
+          results.push({
+            type: 'pass',
+            module: mid,
+            msg: `헤드라인 ${len}자 — OK`
+          });
+        }
+      }
+
+      // 본문 문장 수 체크
+      const body = section.body || section.textOnImage?.body || '';
+      if (body) {
+        const sentences = body.split(/[.!?。]+/).filter(s => s.trim());
+        if (sentences.length > bodyMaxSentences) {
+          results.push({
+            type: 'warn',
+            module: mid,
+            msg: `본문 ${sentences.length}문장 (권장 ${bodyMaxSentences}문장 이내)`
+          });
+        }
+      }
+
+      // 금지 표현 체크
+      const allText = [
+        headline, body,
+        section.subheadline || '',
+        ...(section.overlayText || []),
+        section.textOnImage?.subheadline || '',
+        section.textOnImage?.body || '',
+        ...(section.textOnImage?.bullets || []),
+        section.cta || ''
+      ].join(' ');
+
+      forbidden.forEach(expr => {
+        if (allText.includes(expr)) {
+          results.push({
+            type: 'fail',
+            module: mid,
+            msg: `금지 표현 발견: <strong>"${expr}"</strong>`
+          });
+        }
+      });
+    });
+
+    return results;
+  },
+
+  /* ========================================
+     내보내기: HTML 상세페이지
+     ======================================== */
+
+  generateStandaloneHTML(planData, options) {
+    const mobileOpts = { ...options, viewMode: 'mobile' };
+    const content = this.generate(planData, mobileOpts);
     const pageWidth = options?.pageWidth || 780;
-    const productName = planData.product?.name || '상세페이지';
+    const name = planData.product?.name || '상세페이지';
 
     return `<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${productName} - 상세페이지</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>${this.getEmbeddedCSS()}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${name} 상세페이지</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR',-apple-system,sans-serif;color:#1f2937;line-height:1.6;background:#fff;-webkit-font-smoothing:antialiased}
+.page{max-width:${pageWidth}px;margin:0 auto;overflow:hidden}
+.cut-card{border-radius:0;box-shadow:none}
+.cut-header,.cut-meta,.mobile-notch{display:none}
+.cut-preview{position:relative;overflow:hidden;background:#e8e8ed}
+.cut-preview::before{content:'';position:absolute;inset:0;background:linear-gradient(45deg,transparent 48.5%,#d8d8e0 48.5%,#d8d8e0 51.5%,transparent 51.5%),linear-gradient(-45deg,transparent 48.5%,#d8d8e0 48.5%,#d8d8e0 51.5%,transparent 51.5%);background-size:24px 24px;opacity:0.4}
+.cut-preview.bg-dark{background:#111827}.cut-preview.bg-dark::before{opacity:.08}
+.cut-preview.bg-navy{background:#0f172a}.cut-preview.bg-navy::before{opacity:.08}
+.cut-preview.bg-light{background:#f8f9fb}.cut-preview.bg-light::before{opacity:.25}
+.cut-preview.bg-white{background:#fff}.cut-preview.bg-white::before{opacity:.2}
+.toi-overlay{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;min-height:400px}
+.toi-overlay.toi-hero{min-height:560px;justify-content:flex-end;padding-bottom:56px;background:linear-gradient(transparent 30%,rgba(0,0,0,.75));color:#fff}
+.toi-overlay.toi-problem,.toi-overlay.toi-center{text-align:center;align-items:center}
+.toi-headline{font-size:28px;font-weight:800;line-height:1.35;margin-bottom:10px}
+.toi-hero .toi-headline{font-size:22px;font-weight:600;opacity:.9}
+.toi-product-name{font-size:52px;font-weight:900;letter-spacing:-1.5px;line-height:1.15;margin-bottom:12px}
+.toi-subheadline{font-size:16px;font-weight:300;opacity:.75}
+.toi-body{font-size:15px;line-height:1.8;color:#6b7280;margin-top:8px}
+.toi-hero .toi-body,.cut-preview.bg-dark .toi-body,.cut-preview.bg-navy .toi-body{color:rgba(255,255,255,.65)}
+.toi-badges{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.toi-badge{padding:5px 14px;background:rgba(37,99,235,.1);color:#2563eb;border-radius:20px;font-size:12px;font-weight:600}
+.cut-preview.bg-dark .toi-badge,.cut-preview.bg-navy .toi-badge{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85)}
+.toi-bullets{list-style:none;display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.toi-bullet{display:flex;align-items:center;gap:10px;font-size:14px;color:#374151}
+.toi-bullet::before{content:'';width:6px;height:6px;background:#2563eb;border-radius:50%;flex-shrink:0}
+.toi-steps{display:flex;gap:12px;margin:20px 0;flex-wrap:wrap}
+.toi-step{flex:1;min-width:120px;background:rgba(0,0,0,.03);border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:16px 12px;text-align:center}
+.toi-step-num{font-size:10px;font-weight:800;letter-spacing:2px;color:#2563eb;margin-bottom:6px}
+.toi-step-text{font-size:13px;color:#374151}
+.toi-points{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+.toi-point{display:flex;align-items:center;gap:10px;font-size:15px;color:#374151}
+.toi-point-check{width:20px;height:20px;flex-shrink:0;color:#10b981}
+.toi-table{width:100%;border-collapse:collapse;margin:20px 0;overflow:hidden;border-radius:10px}
+.toi-table th,.toi-table td{padding:14px 16px;font-size:13px;text-align:center;border-bottom:1px solid rgba(0,0,0,.06)}
+.toi-table th{background:rgba(0,0,0,.03);font-weight:700;font-size:12px}
+.comp-label{text-align:left;font-weight:600}.comp-old{color:#9ca3af}.comp-new{font-weight:700;color:#2563eb}
+.toi-faq{display:flex;flex-direction:column;gap:12px;margin:20px 0;width:100%}
+.toi-faq-item{border:1px solid rgba(0,0,0,.08);border-radius:10px;overflow:hidden}
+.toi-faq-q{display:flex;align-items:center;gap:10px;padding:14px 16px;background:rgba(0,0,0,.02);font-size:14px;font-weight:600}
+.toi-faq-a{padding:14px 16px;font-size:13px;color:#6b7280;line-height:1.6;display:flex;align-items:flex-start;gap:10px}
+.toi-faq-badge{width:22px;height:22px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:800;color:#fff}
+.toi-faq-badge.q{background:#2563eb}.toi-faq-badge.a{background:#10b981}
+.toi-quotes{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap}
+.toi-quote{flex:1;min-width:180px;background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:20px;font-size:14px;font-style:italic;color:#374151;line-height:1.7;position:relative}
+.toi-quote::before{content:'\\201C';font-size:40px;color:#2563eb;opacity:.2;position:absolute;top:8px;left:12px;line-height:1}
+.toi-cta{display:inline-block;margin-top:24px;padding:14px 40px;background:#2563eb;color:#fff;border-radius:50px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 16px rgba(37,99,235,.3)}
+.toi-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0;width:100%}
+.toi-card{background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:20px;display:flex;align-items:flex-start;gap:12px}
+.toi-card-num{font-size:18px;font-weight:800;color:#2563eb;flex-shrink:0}
+.toi-card-text{font-size:13px;color:#374151;line-height:1.5}
+.cut-img-guide{position:absolute;top:12px;right:12px;z-index:3;background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;backdrop-filter:blur(4px)}
+.cut-preview.bg-light .cut-img-guide,.cut-preview.bg-white .cut-img-guide{background:rgba(0,0,0,.06);color:rgba(0,0,0,.4)}
+.cut-file-hint{position:absolute;bottom:8px;left:12px;z-index:3;background:rgba(99,102,241,.15);color:#818cf8;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+</style>
 </head>
 <body>
-  <div class="generated-page" style="max-width:${pageWidth}px;margin:0 auto;${themeCSS}">
-    ${content}
-  </div>
+<div class="page">${content}</div>
 </body>
 </html>`;
   },
 
-  /**
-   * 촬영 가이드 문서 생성
-   */
-  generateImageGuide(planData) {
-    const sections = planData.sections || [];
-    const fileNames = planData.fileNamingGuide || [];
-    const checklist = planData.image_asset_checklist || [];
-    const prompts = planData.image_generation_prompt_examples || [];
+  /* ========================================
+     내보내기: 디자이너 전달용
+     ======================================== */
 
-    let md = `# ${planData.product?.name || '상품'} 상세페이지 촬영 가이드\n\n`;
-    md += `## 전체 비주얼 방향\n`;
-    md += `- 무드: ${planData.visualDirection?.overallMood || '-'}\n`;
-    md += `- 촬영 스타일: ${(planData.visualDirection?.photoStyle || []).join(', ')}\n`;
-    md += `- 라이팅: ${(planData.visualDirection?.lighting || []).join(' / ')}\n\n`;
+  generateDesignerDoc(planData) {
+    const p = planData.product || {};
+    const vd = planData.visualDirection || {};
+    let doc = `# ${p.name || '상품'} 상세페이지 디자인 가이드\n\n`;
 
-    md += `## 섹션별 이미지 가이드\n\n`;
-    sections.forEach((s, i) => {
-      if (!s.imageConcept) return;
-      md += `### ${s.moduleId} - ${s.name}\n`;
-      md += `- **파일명**: ${fileNames[i] || '-'}\n`;
-      md += `- **요약**: ${s.imageConcept.summary}\n`;
-      md += `- **상세 가이드**: ${s.imageConcept.detailedDescription}\n\n`;
+    doc += `## 제품 정보\n`;
+    doc += `- 브랜드: ${p.brand || '-'}\n`;
+    doc += `- 제품명: ${p.name || '-'}\n`;
+    doc += `- 유형: ${p.type || '-'}\n`;
+    doc += `- 컨셉: ${p.concept || '-'}\n\n`;
+
+    doc += `## 비주얼 디렉션\n`;
+    doc += `- 전체 무드: ${vd.overallMood || '-'}\n`;
+    doc += `- 촬영 스타일: ${(vd.photoStyle || []).join(', ')}\n`;
+    doc += `- 라이팅: ${(vd.lighting || []).join(' / ')}\n`;
+    const bg = vd.backgroundUsage || {};
+    doc += `- 배경 — 히어로: ${bg.hero || '-'} / 베네핏: ${bg.benefit || '-'} / CTA: ${bg.cta || '-'}\n\n`;
+
+    const bs = planData.brandSystem || {};
+    doc += `## 브랜드 시스템\n`;
+    doc += `- 키워드: ${(bs.brandKeywords || []).join(', ')}\n`;
+    doc += `- 톤: ${bs.brandVoice?.tone || '-'}\n`;
+    doc += `- 스타일: ${(bs.brandVoice?.style || []).join(', ')}\n\n`;
+
+    doc += `## 컷별 디자인 지시\n\n`;
+    (planData.sections || []).forEach((s, i) => {
+      doc += `### ${s.moduleId} — ${s.name}\n`;
+      doc += `**헤드라인**: ${s.headline || '-'}\n`;
+      if (s.body) doc += `**본문**: ${s.body}\n`;
+      if (s.layout) doc += `**레이아웃**: ${s.layout}\n`;
+      if (s.heightGuide) doc += `**높이 가이드**: ${s.heightGuide}\n`;
+
+      const ic = s.imageConcept;
+      if (ic) {
+        doc += `**이미지 요약**: ${ic.summary}\n`;
+        doc += `**상세 촬영 가이드**: ${ic.detailedDescription}\n`;
+      }
+
+      const fn = planData.fileNamingGuide?.[i];
+      if (fn) doc += `**파일명**: ${fn}\n`;
+
+      // textOnImage 내용
+      const toi = s.textOnImage;
+      if (toi) {
+        doc += `**이미지 위 텍스트**:\n`;
+        if (toi.headline) doc += `  - 헤드라인: ${toi.headline}\n`;
+        if (toi.subheadline) doc += `  - 서브: ${toi.subheadline}\n`;
+        if (toi.body) doc += `  - 본문: ${toi.body}\n`;
+        if (toi.badges?.length) doc += `  - 배지: ${toi.badges.join(', ')}\n`;
+        if (toi.bullets?.length) doc += `  - 불릿: ${toi.bullets.join(' / ')}\n`;
+        if (toi.cta) doc += `  - CTA: ${toi.cta}\n`;
+      }
+
+      // cuts[] 디자이너 노트
+      const cut = s.cuts?.[0];
+      if (cut) {
+        if (cut.purpose) doc += `**컷 목적**: ${cut.purpose}\n`;
+        if (cut.messageCore) doc += `**핵심 메시지**: ${cut.messageCore}\n`;
+        if (cut.layout) {
+          doc += `**레이아웃 상세**: ${[cut.layout.type, cut.layout.composition, cut.layout.cameraAngle, cut.layout.crop].filter(Boolean).join(' / ')}\n`;
+        }
+        if (cut.designerNotes?.length) {
+          doc += `**디자이너 노트**:\n`;
+          cut.designerNotes.forEach(n => { doc += `  - ${n}\n`; });
+        }
+      }
+
+      doc += '\n---\n\n';
     });
 
+    // 이미지 체크리스트
+    const checklist = planData.image_asset_checklist || [];
     if (checklist.length) {
-      md += `## 필수 촬영 에셋 체크리스트\n`;
-      checklist.forEach(c => { md += `- [ ] ${c}\n`; });
-      md += '\n';
+      doc += `## 필수 촬영 에셋\n`;
+      checklist.forEach(c => { doc += `- [ ] ${c}\n`; });
+      doc += '\n';
     }
 
-    if (prompts.length) {
-      md += `## AI 이미지 생성 프롬프트 예시\n`;
-      prompts.forEach((p, i) => { md += `${i + 1}. ${p}\n`; });
-    }
-
-    return md;
+    return doc;
   },
 
-  /**
-   * 내보내기용 CSS (독립 실행 HTML에 포함)
-   */
-  getEmbeddedCSS() {
-    return `
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif; color:var(--dp-text,#1f2937); line-height:1.6; -webkit-font-smoothing:antialiased; background:#fff; }
-.generated-page { overflow:hidden; }
+  /* ========================================
+     내보내기: 촬영 가이드
+     ======================================== */
 
-/* 이미지 플레이스홀더 */
-.dp-image-placeholder { background:#f0f0f5; border:2px dashed #c5c5d0; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
-.dp-image-placeholder::before { content:''; position:absolute; inset:0; background:linear-gradient(45deg,transparent 48%,#dddde5 48%,#dddde5 52%,transparent 52%),linear-gradient(-45deg,transparent 48%,#dddde5 48%,#dddde5 52%,transparent 52%); background-size:30px 30px; opacity:0.2; }
-.ph-content { position:relative; z-index:1; text-align:center; padding:32px 24px; max-width:500px; }
-.ph-icon { width:40px; height:40px; margin:0 auto 12px; color:#9ca3af; }
-.ph-icon svg { width:100%; height:100%; }
-.ph-label { font-size:15px; font-weight:700; color:#6b7280; margin-bottom:8px; }
-.ph-detail { font-size:12px; color:#9ca3af; line-height:1.6; }
-.ph-file { font-size:11px; color:#a5b4fc; margin-top:8px; padding:2px 10px; background:rgba(99,102,241,0.08); border-radius:10px; display:inline-block; }
+  generatePhotoGuide(planData) {
+    const vd = planData.visualDirection || {};
+    let doc = `# ${planData.product?.name || '상품'} 촬영 가이드\n\n`;
 
-/* 히어로 */
-.dp-hero { position:relative; background:var(--dp-hero-bg,#111827); }
-.dp-hero .dp-image-placeholder { min-height:500px; background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.15); }
-.dp-hero .dp-image-placeholder::before { opacity:0.05; }
-.dp-hero .ph-label,.dp-hero .ph-detail,.dp-hero .ph-icon { color:rgba(255,255,255,0.4); }
-.hero-overlay { position:absolute; bottom:0; left:0; right:0; padding:80px 48px 48px; background:linear-gradient(transparent,rgba(0,0,0,0.85)); color:#fff; }
-.hero-headline { font-size:32px; font-weight:800; line-height:1.3; margin-bottom:8px; }
-.hero-product-name { font-size:48px; font-weight:900; letter-spacing:-1px; margin-bottom:12px; }
-.hero-sub { font-size:16px; font-weight:300; opacity:0.8; }
+    doc += `## 촬영 방향\n`;
+    doc += `- 무드: ${vd.overallMood || '-'}\n`;
+    doc += `- 스타일: ${(vd.photoStyle || []).join(', ')}\n`;
+    doc += `- 라이팅: ${(vd.lighting || []).join(' / ')}\n\n`;
 
-/* 문제 공감 */
-.dp-problem { background:#fafafa; }
-.dp-problem .problem-text-area { padding:48px; text-align:center; }
+    doc += `## 컷별 촬영 지시\n\n`;
+    (planData.sections || []).forEach((s, i) => {
+      const ic = s.imageConcept;
+      if (!ic) return;
+      const fn = planData.fileNamingGuide?.[i] || '';
+      doc += `### ${s.moduleId} | ${ic.summary}\n`;
+      doc += `**파일명**: ${fn}\n`;
+      doc += `**상세 지시**: ${ic.detailedDescription}\n`;
 
-/* 해결 제안 */
-.dp-solution { background:#fff; }
-.dp-solution .solution-text-area { padding:48px; text-align:center; }
+      const cut = s.cuts?.[0];
+      if (cut?.layout) {
+        doc += `**앵글**: ${cut.layout.cameraAngle || '-'} / **구도**: ${cut.layout.composition || '-'} / **크롭**: ${cut.layout.crop || '-'}\n`;
+      }
+      doc += '\n';
+    });
 
-/* 공통 텍스트 */
-.section-headline { font-size:26px; font-weight:800; line-height:1.4; margin-bottom:12px; color:var(--dp-text,#1f2937); }
-.section-headline.center { text-align:center; }
-.section-body { font-size:15px; line-height:1.8; color:var(--dp-text-light,#6b7280); }
-.section-body.center { text-align:center; }
+    const checklist = planData.image_asset_checklist || [];
+    if (checklist.length) {
+      doc += `## 에셋 체크리스트\n`;
+      checklist.forEach(c => { doc += `- [ ] ${c}\n`; });
+    }
 
-/* 혜택/장점 */
-.dp-benefit { display:grid; grid-template-columns:1fr 1fr; min-height:400px; }
-.dp-benefit.reverse .benefit-image { order:2; }
-.dp-benefit.reverse .benefit-text { order:1; }
-.benefit-image { position:relative; }
-.benefit-image .dp-image-placeholder { width:100%; height:100%; min-height:400px; }
-.benefit-text { display:flex; flex-direction:column; justify-content:center; padding:48px; background:var(--dp-benefit-bg,#f9fafb); }
-.benefit-label { font-size:11px; font-weight:700; letter-spacing:3px; color:var(--dp-accent,#2563eb); margin-bottom:12px; }
-.benefit-headline { font-size:26px; font-weight:800; margin-bottom:12px; line-height:1.3; }
-.benefit-body { font-size:15px; line-height:1.8; color:var(--dp-text-light,#6b7280); }
+    return doc;
+  },
 
-/* 추천 대상 */
-.dp-target { padding:48px; background:#fff; }
-.target-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:32px 0; }
-.target-card { background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:24px; display:flex; align-items:flex-start; gap:16px; }
-.target-num { font-size:20px; font-weight:800; color:var(--dp-accent,#2563eb); flex-shrink:0; }
-.target-text { font-size:14px; line-height:1.6; color:#374151; }
+  /* ========================================
+     내보내기: AI 프롬프트 시트
+     ======================================== */
 
-/* 비교 테이블 */
-.dp-comparison { padding:48px; background:#fff; }
-.comp-table { width:100%; border-collapse:collapse; margin:32px 0; }
-.comp-table th,.comp-table td { padding:16px 20px; text-align:center; font-size:14px; border-bottom:1px solid #e5e7eb; }
-.comp-table th { background:#f9fafb; font-weight:700; font-size:13px; }
-.comp-label { text-align:left!important; font-weight:600; color:#374151; }
-.comp-old { color:#9ca3af; }
-.comp-old-header { color:#9ca3af; }
-.comp-new { font-weight:700; color:var(--dp-accent,#2563eb); }
-.comp-new-header { color:var(--dp-accent,#2563eb); font-weight:700; }
+  generateAIPromptSheet(planData) {
+    let doc = `# ${planData.product?.name || '상품'} AI 이미지 생성 프롬프트\n\n`;
 
-/* 제품 디테일 */
-.dp-detail { padding:48px; background:#fafafa; }
+    // 기획서 내 프롬프트 예시
+    const examples = planData.image_generation_prompt_examples || [];
+    if (examples.length) {
+      doc += `## 기획서 프롬프트 예시\n\n`;
+      examples.forEach((p, i) => {
+        doc += `### ${i + 1}번\n\`\`\`\n${p}\n\`\`\`\n\n`;
+      });
+    }
 
-/* 사용 흐름 */
-.dp-usage { padding:48px; background:#fff; }
-.flow-steps { display:flex; align-items:center; justify-content:center; gap:8px; margin:32px 0; flex-wrap:wrap; }
-.flow-step { background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:20px 16px; text-align:center; flex:1; min-width:140px; }
-.flow-step-num { font-size:11px; font-weight:800; letter-spacing:2px; color:var(--dp-accent,#2563eb); margin-bottom:8px; }
-.flow-step-text { font-size:13px; color:#374151; }
-.flow-arrow { color:#d1d5db; flex-shrink:0; }
+    // cuts[] 기반 프롬프트
+    doc += `## 컷별 AI 프롬프트\n\n`;
+    (planData.sections || []).forEach(s => {
+      const cut = s.cuts?.[0];
+      if (!cut?.aiPrompt) return;
+      doc += `### ${s.moduleId} — ${s.name}\n`;
+      if (cut.aiPrompt.positive) {
+        doc += `**Positive**:\n\`\`\`\n${cut.aiPrompt.positive}\n\`\`\`\n`;
+      }
+      if (cut.aiPrompt.negative?.length) {
+        doc += `**Negative**: ${cut.aiPrompt.negative.join(', ')}\n`;
+      }
+      doc += '\n';
+    });
 
-/* 신뢰 */
-.dp-trust { padding:48px; background:#f9fafb; }
-.trust-list { display:flex; flex-direction:column; gap:16px; margin:32px auto; max-width:500px; }
-.trust-point { display:flex; align-items:center; gap:12px; font-size:15px; color:#374151; }
-.trust-check { color:#10b981; flex-shrink:0; }
+    // imageConcept 기반 자동 프롬프트 생성
+    doc += `## imageConcept 기반 자동 생성 프롬프트\n\n`;
+    (planData.sections || []).forEach(s => {
+      const ic = s.imageConcept;
+      if (!ic?.detailedDescription) return;
+      doc += `### ${s.moduleId} — ${ic.summary}\n`;
+      doc += `\`\`\`\n${ic.detailedDescription}, 상세페이지용 세로 비율, 한국 이커머스 스타일\n\`\`\`\n\n`;
+    });
 
-/* FAQ */
-.dp-faq { padding:48px; background:#fff; }
-.faq-list { margin-top:32px; display:flex; flex-direction:column; gap:16px; }
-.faq-item { border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
-.faq-q { display:flex; align-items:center; gap:12px; padding:16px 20px; background:#f9fafb; font-weight:600; font-size:14px; }
-.faq-a { display:flex; align-items:flex-start; gap:12px; padding:16px 20px; font-size:14px; color:#6b7280; line-height:1.6; }
-.faq-badge { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--dp-accent,#2563eb); color:#fff; font-size:12px; font-weight:800; flex-shrink:0; }
-.faq-badge-a { background:#10b981; }
-
-/* 체감 메시지 */
-.dp-experience { padding:48px; background:#f9fafb; }
-.exp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin-top:32px; }
-.exp-quote { background:#fff; border-radius:12px; padding:24px; border:1px solid #e5e7eb; position:relative; }
-.exp-quote-icon { position:absolute; top:16px; right:16px; color:var(--dp-accent,#2563eb); }
-.exp-quote p { font-size:15px; line-height:1.7; color:#374151; font-style:italic; }
-
-/* CTA */
-.dp-cta { background:var(--dp-cta-bg,#f0f9ff); }
-.cta-content { padding:48px; text-align:center; }
-.cta-headline { font-size:28px; font-weight:800; margin-bottom:12px; }
-.cta-body { font-size:15px; color:var(--dp-text-light,#6b7280); margin-bottom:32px; }
-.cta-button { display:inline-block; background:var(--dp-accent,#2563eb); color:#fff; padding:16px 48px; border-radius:50px; font-size:16px; font-weight:700; text-decoration:none; box-shadow:0 4px 20px rgba(37,99,235,0.3); }
-
-/* 범용 */
-.dp-generic { padding:48px; }
-.generic-list { margin:16px 0; padding-left:20px; }
-.generic-list li { margin-bottom:8px; font-size:14px; color:#6b7280; line-height:1.6; }
-    `;
+    return doc;
   }
 };

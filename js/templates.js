@@ -109,8 +109,55 @@ const Templates = {
     return `<div class="cut-meta">${parts.join('')}</div>`;
   },
 
-  /* ===== 배경 클래스 결정 ===== */
+  /* ===== _resolved 토큰 → 인라인 스타일 생성 ===== */
+  resolvedPreviewStyle(section) {
+    const r = section._resolved;
+    if (!r?.colors?.background) return '';
+    return `background:${r.colors.background};`;
+  },
+
+  resolvedOverlayStyle(section) {
+    const r = section._resolved;
+    if (!r) return '';
+    let s = '';
+    if (r.colors?.text) s += `color:${r.colors.text};`;
+    if (r.padding) s += `padding:${r.padding}px;`;
+    return s;
+  },
+
+  resolvedHeadlineStyle(section) {
+    const r = section._resolved;
+    const t = r?.typography?.title;
+    if (!t) return '';
+    let s = '';
+    if (t.fontFamily) s += `font-family:'${t.fontFamily}','Noto Sans KR',sans-serif;`;
+    if (t.weight) s += `font-weight:${t.weight};`;
+    if (t.sizePx) s += `font-size:${t.sizePx}px;`;
+    if (t.lineHeight) s += `line-height:${t.lineHeight};`;
+    return s;
+  },
+
+  resolvedBodyStyle(section) {
+    const r = section._resolved;
+    const t = r?.typography?.desc;
+    if (!t) return '';
+    let s = '';
+    if (t.fontFamily) s += `font-family:'${t.fontFamily}','Noto Sans KR',sans-serif;`;
+    if (t.weight) s += `font-weight:${t.weight};`;
+    if (t.sizePx) s += `font-size:${t.sizePx}px;`;
+    if (t.lineHeight) s += `line-height:${t.lineHeight};`;
+    return s;
+  },
+
+  resolvedAccentColor(section) {
+    return section._resolved?.colors?.accent || null;
+  },
+
+  /* ===== 배경 클래스 결정 (토큰 없을 때 폴백) ===== */
   getBgClass(section, ctx) {
+    // _resolved가 있으면 인라인 스타일로 처리하므로 클래스 불필요
+    if (section._resolved?.colors?.background) return '';
+
     const bgUsage = ctx.visualDirection?.backgroundUsage || {};
     const name = section.name || '';
 
@@ -125,9 +172,7 @@ const Templates = {
       if (b.includes('화이트')) return 'bg-white';
       return 'bg-light';
     }
-    if (name === 'final_cta') {
-      return 'bg-light';
-    }
+    if (name === 'final_cta') return 'bg-light';
     if (name === 'problem_section') return 'bg-light';
     return 'bg-white';
   },
@@ -171,7 +216,6 @@ const Templates = {
      ======================================== */
 
   renderTextOnImage(toi, section, overlayClass) {
-    // textOnImage 객체가 있으면 사용, 없으면 섹션 필드에서 조합
     const src = toi || {};
     const headline = src.headline || section.headline || '';
     const subheadline = src.subheadline || section.subheadline || '';
@@ -179,6 +223,12 @@ const Templates = {
     const productName = src.productName || section.productName || '';
     const badges = src.badges || [];
     const bullets = src.bullets || [];
+
+    // resolved 토큰 스타일
+    const overlayStyle = this.resolvedOverlayStyle(section);
+    const headlineStyle = this.resolvedHeadlineStyle(section);
+    const bodyStyle = this.resolvedBodyStyle(section);
+    const accent = this.resolvedAccentColor(section);
     const steps = src.steps || section.steps || [];
     const points = src.points || section.points || [];
     const items = src.items || section.items || [];
@@ -189,13 +239,14 @@ const Templates = {
 
     let parts = [];
 
-    if (headline) parts.push(`<div class="toi-headline">${headline}</div>`);
-    if (productName) parts.push(`<div class="toi-product-name">${productName}</div>`);
+    if (headline) parts.push(`<div class="toi-headline"${headlineStyle ? ` style="${headlineStyle}"` : ''}>${headline}</div>`);
+    if (productName) parts.push(`<div class="toi-product-name"${headlineStyle ? ` style="${headlineStyle}"` : ''}>${productName}</div>`);
     if (subheadline) parts.push(`<div class="toi-subheadline">${subheadline}</div>`);
-    if (body) parts.push(`<div class="toi-body">${body}</div>`);
+    if (body) parts.push(`<div class="toi-body"${bodyStyle ? ` style="${bodyStyle}"` : ''}>${body}</div>`);
 
     if (badges.length) {
-      parts.push(`<div class="toi-badges">${badges.map(b => `<span class="toi-badge">${b}</span>`).join('')}</div>`);
+      const badgeStyle = accent ? ` style="background:${accent};color:#fff"` : '';
+      parts.push(`<div class="toi-badges">${badges.map(b => `<span class="toi-badge"${badgeStyle}>${b}</span>`).join('')}</div>`);
     }
 
     if (bullets.length) {
@@ -250,7 +301,7 @@ const Templates = {
       parts.push(`<span class="toi-cta">${cta}</span>`);
     }
 
-    return `<div class="toi-overlay ${overlayClass || ''}">${parts.join('\n')}</div>`;
+    return `<div class="toi-overlay ${overlayClass || ''}"${overlayStyle ? ` style="${overlayStyle}"` : ''}>${parts.join('\n')}</div>`;
   },
 
   /* ========================================
@@ -259,27 +310,28 @@ const Templates = {
 
   hero_cover(section, ctx) {
     const bgClass = this.getBgClass(section, ctx);
+    const rps = this.resolvedPreviewStyle(section);
     const toi = section.textOnImage || null;
-    // 히어로는 overlayText가 있으면 그걸 사용
     let overlayContent;
     if (toi) {
       overlayContent = this.renderTextOnImage(toi, section, 'toi-hero');
     } else if (section.overlayText?.length) {
+      const hs = this.resolvedHeadlineStyle(section);
       const parts = section.overlayText.map((t, i) => {
-        if (i === 0) return `<div class="toi-headline">${t}</div>`;
-        if (i === 1) return `<div class="toi-product-name">${t}</div>`;
+        if (i === 0) return `<div class="toi-headline"${hs ? ` style="${hs}"` : ''}>${t}</div>`;
+        if (i === 1) return `<div class="toi-product-name"${hs ? ` style="${hs}"` : ''}>${t}</div>`;
         return `<div class="toi-subheadline">${t}</div>`;
       }).join('');
-      overlayContent = `<div class="toi-overlay toi-hero">${parts}</div>`;
+      const os = this.resolvedOverlayStyle(section);
+      overlayContent = `<div class="toi-overlay toi-hero"${os ? ` style="${os}"` : ''}>${parts}</div>`;
     } else {
       overlayContent = this.renderTextOnImage(null, section, 'toi-hero');
     }
 
-    const height = section.heightGuide || '1200~1600px';
-    const parsedH = this.parseHeight(height);
+    const parsedH = this.parseHeight(section.heightGuide || '1200~1600px');
 
     const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:${parsedH}">
+      <div class="cut-preview ${bgClass}" style="min-height:${parsedH};${rps}">
         ${this.imgGuideBadge(section, ctx)}
         ${overlayContent}
       </div>`;
@@ -291,146 +343,41 @@ const Templates = {
     const toi = section.textOnImage || null;
     const parsedH = this.parseHeight(section.heightGuide || '900~1200px');
 
+    const rps = this.resolvedPreviewStyle(section);
     const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:${parsedH}">
+      <div class="cut-preview ${bgClass}" style="min-height:${parsedH};${rps}">
         ${this.imgGuideBadge(section, ctx)}
         ${this.renderTextOnImage(toi, section, 'toi-problem')}
       </div>`;
     return this.cutCard(section, ctx, inner);
   },
 
-  solution_section(section, ctx) {
+  /* --- 공통 컷 프리뷰 생성 헬퍼 --- */
+  _cutPreview(section, ctx, overlayClass, minHeight) {
     const bgClass = this.getBgClass(section, ctx);
+    const rps = this.resolvedPreviewStyle(section);
     const toi = section.textOnImage || null;
+    const h = this.parseHeight(section.heightGuide || minHeight);
 
     const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:450px">
+      <div class="cut-preview ${bgClass}" style="min-height:${h};${rps}">
         ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-solution toi-center')}
+        ${this.renderTextOnImage(toi, section, overlayClass)}
       </div>`;
     return this.cutCard(section, ctx, inner);
   },
 
-  benefit(section, ctx, index) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:400px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-benefit')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  target_users(section, ctx) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:450px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  comparison_table(section, ctx) {
-    this._ctx = ctx; // 임시 참조 (테이블에서 productName 필요)
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:400px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  product_detail(section, ctx) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:500px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  usage_flow(section, ctx) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:400px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  trust_section(section, ctx) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:350px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  faq(section, ctx) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:400px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  experience_message(section, ctx) {
-    const bgClass = 'bg-light';
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:300px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  final_cta(section, ctx) {
-    const bgClass = this.getBgClass(section, ctx);
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview ${bgClass}" style="min-height:350px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
-
-  /* 범용 폴백 */
-  generic(section, ctx) {
-    const toi = section.textOnImage || null;
-
-    const inner = `
-      <div class="cut-preview bg-white" style="min-height:350px">
-        ${this.imgGuideBadge(section, ctx)}
-        ${this.renderTextOnImage(toi, section, 'toi-center')}
-      </div>`;
-    return this.cutCard(section, ctx, inner);
-  },
+  solution_section(section, ctx) { return this._cutPreview(section, ctx, 'toi-solution toi-center', '450px'); },
+  benefit(section, ctx, index) { return this._cutPreview(section, ctx, 'toi-benefit', '400px'); },
+  target_users(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '450px'); },
+  comparison_table(section, ctx) { this._ctx = ctx; return this._cutPreview(section, ctx, 'toi-center', '400px'); },
+  product_detail(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '500px'); },
+  usage_flow(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '400px'); },
+  trust_section(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '350px'); },
+  faq(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '400px'); },
+  experience_message(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '300px'); },
+  final_cta(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '350px'); },
+  generic(section, ctx) { return this._cutPreview(section, ctx, 'toi-center', '350px'); },
 
   /* ===== 유틸 ===== */
   parseHeight(h) {

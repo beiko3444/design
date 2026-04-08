@@ -17,10 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const parsed = JSON.parse(val);
       const sc = parsed.sections?.length || 0;
       const pn = parsed.product?.name || '?';
-      const hasCuts = parsed.sections?.some(s => s.cuts?.length) ? ' / cuts[] 포함' : '';
-      const hasToi = parsed.sections?.some(s => s.textOnImage) ? ' / textOnImage 포함' : '';
+      const hasCuts = parsed.sections?.some(s => s.cuts?.length) ? ' / cuts[]' : '';
+      const hasToi = parsed.sections?.some(s => s.textOnImage) ? ' / textOnImage' : '';
+      const hasDT = parsed.designTokens ? ' / designTokens' : '';
+      const hasCT = parsed.componentTemplates ? ' / componentTemplates' : '';
+      const hasRef = parsed.sections?.some(s => s.templateRef) ? ' / templateRef' : '';
       status.className = 'json-status valid';
-      status.textContent = `JSON 유효 — ${pn} / 섹션 ${sc}개${hasCuts}${hasToi}`;
+      status.textContent = `JSON 유효 — ${pn} / 섹션 ${sc}개${hasDT}${hasCT}${hasRef}${hasCuts}${hasToi}`;
     } catch (e) {
       status.className = 'json-status invalid';
       status.textContent = `JSON 오류: ${e.message}`;
@@ -65,7 +68,10 @@ function renderPage(planData, options) {
   const pageEl = document.getElementById('generated-page');
   const wrapper = document.getElementById('resultWrapper');
 
-  pageEl.style.maxWidth = options.pageWidth + 'px';
+  // designTokens → CSS 커스텀 프로퍼티 적용
+  const tokenCSS = Generator.generateTokenCSS(planData.designTokens);
+  pageEl.style.cssText = `max-width:${options.pageWidth}px;${tokenCSS}`;
+
   pageEl.innerHTML = Generator.generate(planData, options);
 
   // 모드별 클래스 토글
@@ -228,6 +234,79 @@ function loadQuickBaitDemo() {
         "style": ["짧은 문장", "과장 없는 장점 설명", "현장 중심 표현", "모바일 친화적 카피"]
       }
     },
+    "designTokens": {
+      "colors": {
+        "primary": "#1B2A4A",
+        "secondary": "#2E4A6E",
+        "accent": "#FF6B35",
+        "textPrimary": "#FFFFFF",
+        "textSecondary": "#B0BEC5",
+        "background": "#0D1B2A",
+        "backgroundAlt": "#FFFFFF",
+        "border": "#1E3A5F",
+        "badge": "#FF6B35"
+      },
+      "typography": {
+        "headline": { "fontFamily": "Pretendard", "weight": 800, "sizePx": 32, "lineHeight": 1.3 },
+        "subheadline": { "fontFamily": "Pretendard", "weight": 600, "sizePx": 20, "lineHeight": 1.4 },
+        "body": { "fontFamily": "Pretendard", "weight": 400, "sizePx": 15, "lineHeight": 1.7 },
+        "caption": { "fontFamily": "Pretendard", "weight": 400, "sizePx": 12, "lineHeight": 1.5 },
+        "cta": { "fontFamily": "Pretendard", "weight": 700, "sizePx": 18 },
+        "badge": { "fontFamily": "Pretendard", "weight": 700, "sizePx": 13 }
+      },
+      "spacing": {
+        "sectionGapPx": 0,
+        "innerPaddingPx": 40,
+        "elementGapPx": 16,
+        "cardPaddingPx": 24
+      },
+      "radius": {
+        "card": "12px",
+        "badge": "20px",
+        "button": "8px"
+      },
+      "shadow": {
+        "card": "0 4px 20px rgba(0,0,0,0.3)",
+        "button": "0 2px 10px rgba(255,107,53,0.4)"
+      }
+    },
+    "componentTemplates": {
+      "heroCover": {
+        "layout": "center_product_dark_bg",
+        "heightGuide": "860px",
+        "colorRef": { "background": "colors.background", "text": "colors.textPrimary", "accent": "colors.accent" },
+        "typographyRef": { "title": "typography.headline", "desc": "typography.subheadline" },
+        "paddingRef": "spacing.innerPaddingPx"
+      },
+      "benefitCard": {
+        "layout": "image_left_text_right",
+        "heightGuide": "400px",
+        "colorRef": { "background": "colors.primary", "text": "colors.textPrimary", "accent": "colors.accent" },
+        "typographyRef": { "title": "typography.subheadline", "desc": "typography.body" },
+        "paddingRef": "spacing.cardPaddingPx"
+      },
+      "comparisonTable": {
+        "layout": "two_column_vs",
+        "heightGuide": "600px",
+        "colorRef": { "background": "colors.background", "text": "colors.textPrimary", "accent": "colors.accent" },
+        "typographyRef": { "title": "typography.subheadline", "desc": "typography.body" },
+        "paddingRef": "spacing.innerPaddingPx"
+      },
+      "ctaBlock": {
+        "layout": "full_width_accent_bg",
+        "heightGuide": "350px",
+        "colorRef": { "background": "colors.accent", "text": "colors.textPrimary" },
+        "typographyRef": { "title": "typography.cta", "desc": "typography.body" },
+        "paddingRef": "spacing.innerPaddingPx"
+      },
+      "faqAccordion": {
+        "layout": "stack_vertical_qa",
+        "heightGuide": "auto",
+        "colorRef": { "background": "colors.background", "text": "colors.textPrimary", "accent": "colors.accent" },
+        "typographyRef": { "title": "typography.subheadline", "desc": "typography.body" },
+        "paddingRef": "spacing.innerPaddingPx"
+      }
+    },
     "visualDirection": {
       "overallMood": "실사용 기반의 실사형 상세페이지",
       "photoStyle": ["깔끔한 제품 컷", "현장감 있는 사용 컷", "정보 전달 중심 구성"],
@@ -243,10 +322,11 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M01",
         "name": "hero_cover",
+        "templateRef": "heroCover",
+        "overrides": { "heightGuide": "900px" },
         "headline": "출조 준비를 더 빠르고 간편하게",
         "subheadline": "보관과 휴대의 번거로움을 줄인 간편 미끼 솔루션",
         "productName": "퀵베이트",
-        "heightGuide": "1200~1600px",
         "layout": "제품 중심 세로형 커버",
         "imageConcept": {
           "summary": "메인 커버 이미지",
@@ -279,6 +359,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M04",
         "name": "benefit_storage",
+        "templateRef": "benefitCard",
         "headline": "보관 부담은 줄이고",
         "body": "복잡한 관리 스트레스를 덜고 더 깔끔하게 보관할 수 있습니다.",
         "imageConcept": {
@@ -289,6 +370,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M05",
         "name": "benefit_portable",
+        "templateRef": "benefitCard",
         "headline": "휴대는 더 가볍게",
         "body": "출조와 이동, 현장 활용까지 부담 없이 챙길 수 있습니다.",
         "imageConcept": {
@@ -299,6 +381,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M06",
         "name": "benefit_fast",
+        "templateRef": "benefitCard",
         "headline": "준비 시간은 더 짧게",
         "body": "필요한 순간 빠르게 꺼내 사용할 수 있어 낚시에 더 집중할 수 있습니다.",
         "imageConcept": {
@@ -309,6 +392,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M07",
         "name": "benefit_field",
+        "templateRef": "benefitCard",
         "headline": "현장 사용은 더 실전적으로",
         "body": "출조 현장에서 간편성과 사용 편의성을 높인 실전형 미끼입니다.",
         "imageConcept": {
@@ -329,6 +413,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M09",
         "name": "comparison_table",
+        "templateRef": "comparisonTable",
         "headline": "왜 퀵베이트인가?",
         "rows": ["보관 편의성", "휴대성", "준비 시간", "현장 사용성"],
         "imageConcept": {
@@ -369,6 +454,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M13",
         "name": "faq",
+        "templateRef": "faqAccordion",
         "headline": "자주 묻는 질문",
         "qa": [
           { "q": "퀵베이트는 어떤 제품인가요?", "a": "출조 준비의 번거로움을 줄이기 위해 기획된 간편 미끼입니다." },
@@ -385,6 +471,7 @@ function loadQuickBaitDemo() {
       {
         "moduleId": "M15",
         "name": "final_cta",
+        "templateRef": "ctaBlock",
         "headline": "간편한 준비가 실전의 차이를 만듭니다",
         "productName": "퀵베이트",
         "body": "더 가볍고 더 간편한 출조를 시작해보세요.",
